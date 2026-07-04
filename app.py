@@ -139,6 +139,7 @@ def anfitrion():
         "host.html",
         join_url=join_url,
         nombres_esperados=config.JUGADORES_ESPERADOS,
+        bono=config.PARTIDO_BONO,
     )
 
 
@@ -148,6 +149,7 @@ def jugador():
         "player.html",
         nombres_sugeridos=config.JUGADORES_ESPERADOS,
         momios=game_logic.momios_americanos(),
+        bono=config.PARTIDO_BONO,
     )
 
 

@@ -70,7 +70,7 @@
   <section id="vista-bono-apuesta" class="oculto">
     <div class="p-card">
       <h2>¡Una última oportunidad!</h2>
-      <p class="sub">Te regalamos $1. Apuéstalo en Francia 🇫🇷 vs Argentina 🇦🇷. Momio +9900 para cualquier resultado.</p>
+      <p class="sub">Te regalamos $1. Apuéstalo en {{ bono.equipo1 }} {{ bono.bandera1 }} vs {{ bono.equipo2 }} {{ bono.bandera2 }}. Momio +9900 para cualquier resultado.</p>
       <div class="opciones-apuesta" id="opciones-bono" style="grid-template-columns: 1fr;"></div>
       <button class="btn btn-oro" id="btn-confirmar-bono" style="width:100%; margin-top:14px;" disabled>Apostar mi $1</button>
       <div class="error-txt oculto" id="error-bono"></div>
