@@ -1,103 +1,93 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Quiniela de cumpleaños</title>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-<div id="player-app">
+# -*- coding: utf-8 -*-
+"""
+Configuracion central del juego.
+Aqui se define quienes juegan, que partidos hay y como se reparten.
+Si algun dia quieres reusar esto para otra fiesta, este es el unico
+archivo que necesitas tocar.
+"""
 
-  <div class="p-header">
-    <h1>⚽ Quiniela</h1>
-    <span class="saldo-chip oculto" id="saldo-chip">$0</span>
-  </div>
+import os
 
-  <!-- ============ REGISTRO ============ -->
-  <section id="vista-registro">
-    <div class="p-card">
-      <h2>¿Cómo te llamas?</h2>
-      <p class="sub">Escribe tu nombre para entrar a la quiniela.</p>
-      <input type="text" class="campo-texto" id="input-nombre" placeholder="Tu nombre" maxlength="24" autocomplete="off">
-      <div style="margin-top:14px;">
-        <button class="btn btn-primario" id="btn-registrar" style="width:100%;">Entrar al juego</button>
-      </div>
-      <div class="error-txt oculto" id="error-registro"></div>
-    </div>
-  </section>
+# Llave secreta de Flask (para las cookies de sesion de cada jugador).
+# En PythonAnywhere puedes sobreescribirla con una variable de entorno.
+SECRET_KEY = os.environ.get("SECRET_KEY", "cambia-esto-antes-de-subirlo-a-produccion")
 
-  <!-- ============ ESPERANDO QUE EMPIECE ============ -->
-  <section id="vista-esperando-inicio" class="oculto">
-    <div class="esperando">
-      <div class="balon">⚽</div>
-      <h2 id="saludo-espera"></h2>
-      <p>Espera a que el anfitrión abra las apuestas…</p>
-    </div>
-  </section>
+# Saldo inicial con el que arranca cada jugador
+SALDO_INICIAL = 10.0
 
-  <!-- ============ APOSTANDO (armar parley) ============ -->
-  <section id="vista-apuesta" class="oculto">
-    <div class="p-card">
-      <h2>Arma tu parley</h2>
-      <p class="sub">Elige un pronóstico para cada partido. Al confirmar, apuestas tus $10 completos en los tres a la vez.</p>
-      <div id="contenedor-partidos-apuesta"></div>
-      <button class="btn btn-primario" id="btn-confirmar-parley" style="width:100%;" disabled>Confirmar parley por $10</button>
-      <div class="error-txt oculto" id="error-apuesta"></div>
-    </div>
-  </section>
+# Cuanto se le agrega para la "ultima oportunidad"
+SALDO_BONO = 1.0
 
-  <!-- ============ SIGUIENDO EL PARLEY EN VIVO ============ -->
-  <section id="vista-siguiendo" class="oculto">
-    <div class="p-card">
-      <h2>Tu parley</h2>
-      <p class="sub" id="texto-siguiendo">Los partidos se están jugando en la pantalla…</p>
-      <div id="contenedor-parley-vivo"></div>
-    </div>
-  </section>
+# Momio americano de la ultima apuesta (para que 1 peso se convierta en 100)
+MOMIO_BONO = 9900
 
-  <!-- ============ ANUNCIO CASA / ESPERANDO BONO ============ -->
-  <section id="vista-bono-espera" class="oculto">
-    <div class="esperando">
-      <div class="balon">🏦</div>
-      <h2>La casa nunca pierde…</h2>
-      <p>pero espera un momento.</p>
-    </div>
-  </section>
+# Nombre de archivo de la base de datos SQLite
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "quiniela.db")
 
-  <!-- ============ APOSTAR BONO ============ -->
-  <section id="vista-bono-apuesta" class="oculto">
-    <div class="p-card">
-      <h2>¡Una última oportunidad!</h2>
-      <p class="sub">Te regalamos $1. Apuéstalo en Francia 🇫🇷 vs Argentina 🇦🇷. Momio +9900 para cualquier resultado.</p>
-      <div class="opciones-apuesta" id="opciones-bono" style="grid-template-columns: 1fr;"></div>
-      <button class="btn btn-oro" id="btn-confirmar-bono" style="width:100%; margin-top:14px;" disabled>Apostar mi $1</button>
-      <div class="error-txt oculto" id="error-bono"></div>
-    </div>
-  </section>
+# --------------------------------------------------------------------------
+# Jugadores esperados. El nombre se compara sin mayusculas/acentos raros.
+# slot 0 -> se queda con los partidos 0,1,2
+# slot 1 -> se queda con los partidos 3,4,5
+# Si alguien entra con otro nombre, se le asigna el primer slot libre.
+# --------------------------------------------------------------------------
+JUGADORES_ESPERADOS = ["Arzola", "Yivy"]
 
-  <!-- ============ ESPERANDO RESULTADO BONO ============ -->
-  <section id="vista-bono-esperando" class="oculto">
-    <div class="esperando">
-      <div class="balon">⚽</div>
-      <h2>¡Va el partido final!</h2>
-      <p>Mira la pantalla…</p>
-    </div>
-  </section>
+# --------------------------------------------------------------------------
+# Los 6 partidos "normales" + 1 partido bonus (index 6).
+# El ultimo partido de cada tanda (index 2 y 5) es el que esta forzado a
+# perderse pase lo que pase, para que la quiniela completa truene justo
+# antes del final.
+# --------------------------------------------------------------------------
+PARTIDOS = [
+    {"id": 0, "equipo1": "Francia",        "bandera1": "🇫🇷", "equipo2": "Alemania",  "bandera2": "🇩🇪"},
+    {"id": 1, "equipo1": "Estados Unidos", "bandera1": "🇺🇸", "equipo2": "Bélgica",   "bandera2": "🇧🇪"},
+    {"id": 2, "equipo1": "España",         "bandera1": "🇪🇸", "equipo2": "Portugal",  "bandera2": "🇵🇹"},
+    {"id": 3, "equipo1": "México",         "bandera1": "🇲🇽", "equipo2": "Inglaterra","bandera2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
+    {"id": 4, "equipo1": "Suiza",          "bandera1": "🇨🇭", "equipo2": "Colombia",  "bandera2": "🇨🇴"},
+    {"id": 5, "equipo1": "Argentina",      "bandera1": "🇦🇷", "equipo2": "Egipto",    "bandera2": "🇪🇬"},
+]
 
-  <!-- ============ RESULTADO FINAL ============ -->
-  <section id="vista-fin" class="oculto">
-    <div class="confeti-caja" id="confeti-caja"></div>
-    <div class="p-card resultado-grande">
-      <p class="sub" style="margin-bottom:0;">Tu saldo final</p>
-      <div class="cifra ganaste" id="cifra-final">$0</div>
-      <div class="momio-tag">Momio +9900</div>
-      <p style="margin-top:18px;">Ve con el anfitrión a cobrar tu premio. 🎉</p>
-    </div>
-  </section>
+PARTIDO_BONO = {"id": 6, "equipo1": "Francia", "bandera1": "🇫🇷", "equipo2": "Argentina", "bandera2": "🇦🇷"}
 
-</div>
+# Partidos que le tocan a cada slot (indices dentro de PARTIDOS)
+PARTIDOS_POR_SLOT = {
+    0: [0, 1, 2],
+    1: [3, 4, 5],
+}
 
-<script src="{{ url_for('static', filename='js/player.js') }}"></script>
-</body>
-</html>
+# El ultimo partido de la lista de cada slot es el que se fuerza a perder
+INDICE_PARTIDO_TRUCO = 2  # posicion dentro de la lista de 3 (0,1,2) -> el tercero
+
+# Tipos de apuesta disponibles por partido y su "cuota" decimal
+# (la cuota solo es para que se vea la ganancia potencial en pantalla,
+# el resultado real de la quiniela ya esta decidido de antemano)
+TIPOS_APUESTA = {
+    "equipo1": {"cuota": 2.4},
+    "empate":  {"cuota": 3.1},
+    "equipo2": {"cuota": 2.7},
+    "over":    {"cuota": 1.85},
+    "under":   {"cuota": 1.95},
+}
+
+# Duracion de la animacion de un partido (milisegundos por "minuto" simulado)
+MS_POR_MINUTO = 160  # 90 minutos * 160ms = 14.4s por partido aprox
+
+
+def partidos_de_slot(slot):
+    """IDs de los 3 partidos que le tocan a un slot, en orden."""
+    return PARTIDOS_POR_SLOT[slot]
+
+
+def es_partido_truco(slot, match_id):
+    """True si este partido es el que esta forzado a perderse para ese slot."""
+    partidos = partidos_de_slot(slot)
+    return match_id == partidos[INDICE_PARTIDO_TRUCO]
+
+
+def slot_del_partido(match_id):
+    """A que slot le pertenece un match_id normal (None si es el bono)."""
+    for slot, ids in PARTIDOS_POR_SLOT.items():
+        if match_id in ids:
+            return slot
+    return None
+
