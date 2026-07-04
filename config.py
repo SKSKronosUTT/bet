@@ -26,47 +26,66 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "quiniela.db"
 
 # --------------------------------------------------------------------------
 # Jugadores esperados. El nombre se compara sin mayusculas/acentos raros.
-# slot 0 -> se queda con los partidos 0,1,2
-# slot 1 -> se queda con los partidos 3,4,5
+# slot 0 -> se queda con los partidos 0,1 (España-Portugal, Alemania-Inglaterra)
+# slot 1 -> se queda con los partidos 2,3 (Holanda-Eslovaquia, Brasil-Chile)
 # Si alguien entra con otro nombre, se le asigna el primer slot libre.
 # --------------------------------------------------------------------------
 JUGADORES_ESPERADOS = ["Arzola", "Yivy"]
 
 # --------------------------------------------------------------------------
-# Los 6 partidos "normales" + 1 partido bonus (index 6).
-# El ultimo partido de cada tanda (index 2 y 5) es el que esta forzado a
+# Octavos de final del Mundial 2010, más la Final real (Holanda vs España).
+# El último partido de la lista de cada jugador es el que está forzado a
 # perderse pase lo que pase, para que la quiniela completa truene justo
-# antes del final.
+# antes de la Final.
 # --------------------------------------------------------------------------
 PARTIDOS = [
-    {"id": 0, "equipo1": "Francia",        "bandera1": "🇫🇷", "equipo2": "Alemania",  "bandera2": "🇩🇪"},
-    {"id": 1, "equipo1": "Estados Unidos", "bandera1": "🇺🇸", "equipo2": "Bélgica",   "bandera2": "🇧🇪"},
-    {"id": 2, "equipo1": "España",         "bandera1": "🇪🇸", "equipo2": "Portugal",  "bandera2": "🇵🇹"},
-    {"id": 3, "equipo1": "México",         "bandera1": "🇲🇽", "equipo2": "Inglaterra","bandera2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
-    {"id": 4, "equipo1": "Suiza",          "bandera1": "🇨🇭", "equipo2": "Colombia",  "bandera2": "🇨🇴"},
-    {"id": 5, "equipo1": "Argentina",      "bandera1": "🇦🇷", "equipo2": "Egipto",    "bandera2": "🇪🇬"},
+    {"id": 0, "equipo1": "España",   "bandera1": "🇪🇸", "equipo2": "Portugal",   "bandera2": "🇵🇹"},
+    {"id": 1, "equipo1": "Alemania", "bandera1": "🇩🇪", "equipo2": "Inglaterra", "bandera2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
+    {"id": 2, "equipo1": "Holanda",  "bandera1": "🇳🇱", "equipo2": "Eslovaquia", "bandera2": "🇸🇰"},
+    {"id": 3, "equipo1": "Brasil",   "bandera1": "🇧🇷", "equipo2": "Chile",      "bandera2": "🇨🇱"},
 ]
 
-PARTIDO_BONO = {"id": 6, "equipo1": "Francia", "bandera1": "🇫🇷", "equipo2": "Argentina", "bandera2": "🇦🇷"}
+# La Final real del Mundial 2010: Holanda 0 - España 1 (gol de Iniesta).
+PARTIDO_BONO = {
+    "id": len(PARTIDOS),
+    "equipo1": "Holanda", "bandera1": "🇳🇱",
+    "equipo2": "España",  "bandera2": "🇪🇸",
+}
+
+# Marcador fijo (histórico) del partido bono: Holanda 0 - España 1
+FINAL_MARCADOR = (0, 1)
+
+NUM_PARTIDOS_PRINCIPALES = len(PARTIDOS)
+ID_PARTIDO_BONO = PARTIDO_BONO["id"]
 
 # Partidos que le tocan a cada slot (indices dentro de PARTIDOS)
 PARTIDOS_POR_SLOT = {
-    0: [0, 1, 2],
-    1: [3, 4, 5],
+    0: [0, 1],
+    1: [2, 3],
 }
 
-# El ultimo partido de la lista de cada slot es el que se fuerza a perder
-INDICE_PARTIDO_TRUCO = 2  # posicion dentro de la lista de 3 (0,1,2) -> el tercero
+# Posibles goleadores por selección (para las animaciones de gol).
+JUGADORES_POR_EQUIPO = {
+    "España": ["David Villa", "Fernando Torres"],
+    "Portugal": ["Cristiano Ronaldo"],
+    "Alemania": ["Thomas Müller", "Mesut Özil"],
+    "Inglaterra": ["Wayne Rooney", "Frank Lampard"],
+    "Holanda": ["Robin van Persie", "Arjen Robben"],
+    "Eslovaquia": ["Filip Hološko"],
+    "Brasil": ["Neymar", "Ronaldinho"],
+    "Chile": ["Alexis Sánchez"],
+}
 
-# Tipos de apuesta disponibles por partido y su "cuota" decimal
-# (la cuota solo es para que se vea la ganancia potencial en pantalla,
-# el resultado real de la quiniela ya esta decidido de antemano)
+# Tipos de apuesta disponibles por partido y su "cuota" decimal.
+# (todas dan momio americano positivo, entre +100 y +300 aprox; la cuota
+# solo es para mostrar la "ganancia potencial" en pantalla, el resultado
+# real de la quiniela ya está decidido de antemano)
 TIPOS_APUESTA = {
     "equipo1": {"cuota": 2.4},
-    "empate":  {"cuota": 3.1},
-    "equipo2": {"cuota": 2.7},
-    "over":    {"cuota": 1.85},
-    "under":   {"cuota": 1.95},
+    "empate":  {"cuota": 3.0},
+    "equipo2": {"cuota": 2.6},
+    "over":    {"cuota": 2.1},
+    "under":   {"cuota": 2.15},
 }
 
 # Duracion de la animacion de un partido (milisegundos por "minuto" simulado)
@@ -74,14 +93,15 @@ MS_POR_MINUTO = 160  # 90 minutos * 160ms = 14.4s por partido aprox
 
 
 def partidos_de_slot(slot):
-    """IDs de los 3 partidos que le tocan a un slot, en orden."""
+    """IDs de los partidos que le tocan a un slot, en orden."""
     return PARTIDOS_POR_SLOT[slot]
 
 
 def es_partido_truco(slot, match_id):
-    """True si este partido es el que esta forzado a perderse para ese slot."""
+    """True si este partido es el que esta forzado a perderse para ese slot
+    (siempre el último de la lista de ese jugador)."""
     partidos = partidos_de_slot(slot)
-    return match_id == partidos[INDICE_PARTIDO_TRUCO]
+    return match_id == partidos[-1]
 
 
 def slot_del_partido(match_id):
@@ -90,4 +110,3 @@ def slot_del_partido(match_id):
         if match_id in ids:
             return slot
     return None
-

@@ -3,6 +3,8 @@
 // resultado en vivo y al final apuesta su última oportunidad.
 // ============================================================================
 
+const MOMIOS = JSON.parse(document.getElementById("momios-datos").textContent);
+
 const VISTAS = [
   "vista-registro",
   "vista-esperando-inicio",
@@ -26,6 +28,7 @@ let vistaVisible = null;
 let formularioApuestaListo = false;
 let formularioBonoListo = false;
 let seleccionesParley = {};   // { matchId: tipo }
+let totalPartidosParley = 0;
 let seleccionBono = null;
 let confetiLanzado = false;
 
@@ -89,6 +92,7 @@ function construirFormularioApuesta(data) {
   const cont = $("contenedor-partidos-apuesta");
   cont.innerHTML = "";
   seleccionesParley = {};
+  totalPartidosParley = data.partidos.length;
 
   data.partidos.forEach((partido) => {
     const card = document.createElement("div");
@@ -141,7 +145,7 @@ function construirFormularioApuesta(data) {
 function crearBotonOpcion(matchId, tipo, texto) {
   const btn = document.createElement("div");
   btn.className = "opcion-apuesta";
-  btn.textContent = texto;
+  btn.innerHTML = `${texto}<br><span class="momio-txt">${MOMIOS[tipo] || ""}</span>`;
   btn.dataset.match = matchId;
   btn.dataset.tipo = tipo;
   btn.addEventListener("click", () => {
@@ -149,7 +153,7 @@ function crearBotonOpcion(matchId, tipo, texto) {
     const hermanos = document.querySelectorAll(`.opcion-apuesta[data-match="${matchId}"]`);
     hermanos.forEach((h) => h.classList.remove("seleccionada"));
     btn.classList.add("seleccionada");
-    $("btn-confirmar-parley").disabled = Object.keys(seleccionesParley).length < 3;
+    $("btn-confirmar-parley").disabled = Object.keys(seleccionesParley).length < totalPartidosParley;
   });
   return btn;
 }
@@ -294,10 +298,7 @@ async function actualizar() {
   if (data.fase === "lobby") {
     $("saludo-espera").textContent = `¡Hola, ${data.username}!`;
     mostrarVista("vista-esperando-inicio");
-    return;
-  }
-
-  if (data.fase === "betting") {
+  } else if (data.fase === "betting") {
     if (!data.parlay_submitted) {
       if (!formularioApuestaListo) {
         construirFormularioApuesta(data);
@@ -308,21 +309,12 @@ async function actualizar() {
       renderSeguimiento(data);
       mostrarVista("vista-siguiendo");
     }
-    return;
-  }
-
-  if (data.fase === "playing") {
+  } else if (data.fase === "playing") {
     renderSeguimiento(data);
     mostrarVista("vista-siguiendo");
-    return;
-  }
-
-  if (data.fase === "bono_intro") {
+  } else if (data.fase === "bono_intro") {
     mostrarVista("vista-bono-espera");
-    return;
-  }
-
-  if (data.fase === "bono_apuestas") {
+  } else if (data.fase === "bono_apuestas") {
     if (!data.bonus_bet_submitted) {
       if (!formularioBonoListo) {
         construirFormularioBono(data);
@@ -332,20 +324,19 @@ async function actualizar() {
     } else {
       mostrarVista("vista-bono-esperando");
     }
-    return;
   }
 
   if (data.fase === "bono_playing") {
     mostrarVista("vista-bono-esperando");
-    return;
   }
 
   if (data.fase === "end") {
     $("cifra-final").textContent = "$" + Math.round(data.balance);
     mostrarVista("vista-fin");
     lanzarConfeti();
-    return;
   }
+
+  if (window.twemoji) twemoji.parse(document.getElementById("player-app"));
 }
 
 actualizar();

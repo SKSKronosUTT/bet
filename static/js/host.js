@@ -68,12 +68,11 @@ function animarPartido(prefijo, partido, alTerminar) {
       if (gol.equipo === 1) {
         m1++;
         golesEl1.textContent = m1;
-        lanzarToast(toast, partido.equipo1);
       } else {
         m2++;
         golesEl2.textContent = m2;
-        lanzarToast(toast, partido.equipo2);
       }
+      lanzarToast(toast, gol.jugador);
     }
 
     if (minuto >= 90) {
@@ -84,8 +83,8 @@ function animarPartido(prefijo, partido, alTerminar) {
   }, intervaloMs);
 }
 
-function lanzarToast(toast, nombreEquipo) {
-  toast.textContent = `¡GOOOL de ${nombreEquipo}!`;
+function lanzarToast(toast, nombreGoleador) {
+  toast.textContent = `¡GOOOL de ${nombreGoleador}!`;
   toast.classList.remove("mostrar");
   void toast.offsetWidth; // fuerza reflow para poder relanzar la animación
   toast.classList.add("mostrar");
@@ -164,6 +163,7 @@ function renderJugando(estado) {
     if (matchAnimadoId !== p.id) {
       matchAnimadoId = p.id;
       animarPartido("j", p, () => {
+        $("btn-siguiente").disabled = false;
         $("btn-siguiente").classList.remove("oculto");
       });
     }
@@ -213,6 +213,7 @@ function renderBonoJugando(estado) {
     if (bonoAnimadoId !== p.id) {
       bonoAnimadoId = p.id;
       animarPartido("b", p, () => {
+        $("btn-finalizar-bono").disabled = false;
         $("btn-finalizar-bono").classList.remove("oculto");
       });
     }
@@ -247,6 +248,7 @@ async function actualizar() {
     else if (estado.fase === "bono_apuestas") renderBonoApuestas(estado);
     else if (estado.fase === "bono_playing") renderBonoJugando(estado);
     else if (estado.fase === "end") renderFinal(estado);
+    if (window.twemoji) twemoji.parse(document.getElementById("host-app"));
   } catch (e) {
     console.error("Error consultando /api/estado", e);
   }

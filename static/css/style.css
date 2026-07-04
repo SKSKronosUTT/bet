@@ -70,6 +70,13 @@ button:focus-visible, input:focus-visible, label:focus-within {
 
 .oculto { display: none !important; }
 
+img.emoji {
+  height: 1em;
+  width: 1em;
+  margin: 0 0.05em 0 0.1em;
+  vertical-align: -0.15em;
+}
+
 /* ---------------------------------------------------------------------
    Boton generico (usado tanto en host como jugador)
    --------------------------------------------------------------------- */
@@ -551,6 +558,14 @@ input.campo-texto {
   background: var(--grass);
   border-color: var(--grass-dark);
   color: #fff;
+}
+
+.momio-txt {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  opacity: 0.75;
 }
 
 /* --- Parley / seguimiento en vivo --- */

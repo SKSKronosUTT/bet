@@ -14,22 +14,24 @@ con $100 de saldo para el regalo en efectivo.
    reconoce automáticamente; si escriben otra cosa, se les asigna el
    primer lugar libre).
 3. Cuando ambos están dentro, presionas **"Comenzar apuestas"**. A cada
-   quien le aparecen sus 3 partidos en el celular con $10 de saldo,
+   quien le aparecen sus 2 partidos en el celular con $10 de saldo,
    arman su "parley" (un pronóstico por partido) y confirman.
 4. Presionas **"Comenzar partidos"** y vas pasando partido por partido
    con los botones **"Iniciar partido"** / **"Siguiente partido"**. La
    tele anima el marcador, el reloj y los goles; el celular de cada
    quien se va actualizando solo.
-5. Los primeros 2 pronósticos de cada quien siempre se cumplen. El
-   tercero (el último de su lista) está programado para fallar sin
+5. Los primeros pronósticos de cada quien siempre se cumplen. El
+   último de su lista está programado para fallar sin
    importar qué hayan elegido, así que su parley completo se rompe y
    se quedan en $0 — como en un parley real, si una pata pierde, se
    pierde todo.
 6. Aparece la pantalla **"La casa nunca pierde… ¿una última
    oportunidad?"**. Presionas **"Dar la última oportunidad"**: a cada
-   quien se le regala $1 para apostarlo en Francia 🇫🇷 vs Argentina 🇦🇷,
-   a un momio de +9900. No importa qué resultado escojan, están
-   programados para ganar esa apuesta.
+   quien se le regala $1 para apostarlo en la Final real del Mundial
+   2010, Holanda 🇳🇱 vs España 🇪🇸, a un momio de +9900. No importa qué
+   resultado escojan, están programados para ganar esa apuesta (y de
+   hecho el marcador que se anima es el histórico: 0-1 con gol de
+   Iniesta).
 7. Reproduces ese último partido y presionas **"Revelar premio"**: su
    $1 se convierte automáticamente en $100. Ahí les entregas su premio
    en efectivo. 🎉
@@ -56,7 +58,7 @@ Code/
 ```
 
 Todo el "truco" del juego vive en `game_logic.py` y en `config.py`
-(`INDICE_PARTIDO_TRUCO`, `PARTIDOS_POR_SLOT`, `MOMIO_BONO`). Si algún
+(`PARTIDOS_POR_SLOT`, `MOMIO_BONO`, `FINAL_MARCADOR`). Si algún
 día quieres cambiar los equipos, los nombres de los invitados o el
 saldo inicial, solo edita `config.py`.
 

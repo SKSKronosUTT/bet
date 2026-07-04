@@ -22,6 +22,9 @@ app.config["SECRET_KEY"] = config.SECRET_KEY
 
 db.init_db(app)
 
+BONO_ID = config.ID_PARTIDO_BONO
+NUM_PRINCIPALES = config.NUM_PARTIDOS_PRINCIPALES
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -57,10 +60,10 @@ def player_public(p, conn):
             "marcador2": m["marcador2"] if terminado else None,
         })
 
-    bono = db.get_match(conn, 6)
-    bono_bet = db.get_bet(conn, p["id"], 6)
+    bono = db.get_match(conn, BONO_ID)
+    bono_bet = db.get_bet(conn, p["id"], BONO_ID)
     bono_info = {
-        "id": 6,
+        "id": BONO_ID,
         "equipo1": bono["equipo1"], "bandera1": bono["bandera1"],
         "equipo2": bono["equipo2"], "bandera2": bono["bandera2"],
         "status": bono["status"],
@@ -69,7 +72,7 @@ def player_public(p, conn):
     }
 
     tipos_elegidos = [b["bet_type"] for b in bets.values()]
-    multiplicador = game_logic.calcular_multiplicador(tipos_elegidos) if len(tipos_elegidos) == 3 else None
+    multiplicador = game_logic.calcular_multiplicador(tipos_elegidos) if len(tipos_elegidos) == len(slot_matches) else None
 
     return {
         "id": p["id"],
@@ -141,7 +144,11 @@ def anfitrion():
 
 @app.get("/jugar")
 def jugador():
-    return render_template("player.html", nombres_sugeridos=config.JUGADORES_ESPERADOS)
+    return render_template(
+        "player.html",
+        nombres_sugeridos=config.JUGADORES_ESPERADOS,
+        momios=game_logic.momios_americanos(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -158,11 +165,11 @@ def api_estado():
     match_index = estado["match_index"]
 
     partido_actual = None
-    if fase == "playing" and match_index < 6:
+    if fase == "playing" and match_index < NUM_PRINCIPALES:
         m = db.get_match(conn, match_index)
         partido_actual = match_public(m, revelar_marcador=True)
     elif fase in ("bono_playing", "bono_intro", "bono_apuestas"):
-        m = db.get_match(conn, 6)
+        m = db.get_match(conn, BONO_ID)
         partido_actual = match_public(m, revelar_marcador=(fase == "bono_playing"))
 
     todos_partidos = [match_public(m, revelar_marcador=(m["status"] == "finished")) for m in db.get_matches(conn)]
@@ -253,7 +260,7 @@ def api_apostar():
         return jsonify(error="Apuestas inválidas."), 400
 
     if ids_recibidos != partidos_slot:
-        return jsonify(error="Debes apostar en tus 3 partidos, ni más ni menos."), 400
+        return jsonify(error=f"Debes apostar en tus {len(partidos_slot)} partidos, ni más ni menos."), 400
 
     tipos_validos = set(config.TIPOS_APUESTA.keys())
     for tipo in apuestas.values():
@@ -262,9 +269,10 @@ def api_apostar():
 
     for mid_str, tipo in apuestas.items():
         mid = int(mid_str)
+        m = db.get_match(conn, mid)
         debe_ganar = not config.es_partido_truco(p["slot"], mid)
         m1, m2 = game_logic.generar_marcador(tipo, debe_ganar)
-        goles = game_logic.generar_eventos_goles(m1, m2)
+        goles = game_logic.generar_eventos_goles(m1, m2, m["equipo1"], m["equipo2"])
         db.set_match_result(conn, mid, m1, m2, goles)
         db.create_bet(conn, p["id"], mid, tipo)
 
@@ -292,7 +300,7 @@ def api_apostar_bono():
     if tipo not in ("equipo1", "empate", "equipo2"):
         return jsonify(error="Elige un resultado válido."), 400
 
-    db.create_bet(conn, p["id"], 6, tipo)
+    db.create_bet(conn, p["id"], BONO_ID, tipo)
     db.mark_bonus_bet_submitted(conn, p["id"])
     return jsonify(ok=True)
 
@@ -365,7 +373,7 @@ def host_finalizar_partido():
     db.set_match_status(conn, match_id, "finished")
 
     siguiente = match_id + 1
-    if siguiente >= 6:
+    if siguiente >= NUM_PRINCIPALES:
         db.set_phase(conn, "bono_intro")
     else:
         db.set_match_index(conn, siguiente)
@@ -392,9 +400,10 @@ def host_comenzar_bono():
     jugadores = db.get_players(conn)
     if not all(p["bonus_bet_submitted"] for p in jugadores):
         return jsonify(error="Todavía falta la apuesta final de alguien."), 400
-    m1, m2 = game_logic.generar_marcador_libre()
-    goles = game_logic.generar_eventos_goles(m1, m2)
-    db.set_match_result(conn, 6, m1, m2, goles)
+    m1, m2 = config.FINAL_MARCADOR
+    bono_match = db.get_match(conn, BONO_ID)
+    goles = game_logic.generar_eventos_goles(m1, m2, bono_match["equipo1"], bono_match["equipo2"])
+    db.set_match_result(conn, BONO_ID, m1, m2, goles)
     db.set_phase(conn, "bono_playing")
     return jsonify(ok=True)
 
@@ -404,7 +413,7 @@ def host_reproducir_bono():
     conn = db.get_db()
     if not _requiere_fase(conn, "bono_playing"):
         return jsonify(error="Fase incorrecta."), 400
-    db.set_match_status(conn, 6, "live")
+    db.set_match_status(conn, BONO_ID, "live")
     return jsonify(ok=True)
 
 
@@ -414,12 +423,12 @@ def host_finalizar_bono():
     if not _requiere_fase(conn, "bono_playing"):
         return jsonify(error="Fase incorrecta."), 400
     for p in db.get_players(conn):
-        bet = db.get_bet(conn, p["id"], 6)
+        bet = db.get_bet(conn, p["id"], BONO_ID)
         if bet:
             db.set_bet_status(conn, bet["id"], "ganada")
             pago = game_logic.calcular_pago_bono(p["balance"])
             db.set_player_balance(conn, p["id"], pago)
-    db.set_match_status(conn, 6, "finished")
+    db.set_match_status(conn, BONO_ID, "finished")
     db.set_phase(conn, "end")
     return jsonify(ok=True)
 

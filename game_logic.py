@@ -5,8 +5,8 @@ generamos un marcador de partido que hace que ese pronostico gane o pierda,
 segun lo que necesitemos para la historia de la noche.
 
 Nada de esto es una simulacion real de futbol, es un generador de marcadores
-que hace match con el resultado narrativo que queremos: los primeros dos
-pronosticos de cada quien se cumplen, el tercero truena, y el partido bono
+que hace match con el resultado narrativo que queremos: los pronosticos de
+cada quien se cumplen menos el ultimo, que siempre truena, y la Final
 siempre paga.
 """
 
@@ -51,21 +51,31 @@ def generar_marcador(tipo, debe_ganar):
     return random.choice(candidatos)
 
 
-def generar_marcador_libre():
-    """Marcador sin restricciones, solo para el 'sabor' del partido bono."""
-    opciones = [(0, 0), (1, 0), (0, 1), (1, 1), (2, 1), (1, 2), (2, 0), (0, 2)]
-    return random.choice(opciones)
+def elegir_goleador(nombre_equipo):
+    """Escoge (al azar, con reemplazo) quién anotó un gol de ese equipo."""
+    plantilla = config.JUGADORES_POR_EQUIPO.get(nombre_equipo)
+    if not plantilla:
+        return nombre_equipo
+    return random.choice(plantilla)
 
 
-def generar_eventos_goles(m1, m2):
-    """Lista de goles [{minuto, equipo}] ordenada, para animar el partido."""
+def generar_eventos_goles(m1, m2, equipo1, equipo2):
+    """Lista de goles [{minuto, equipo, jugador}] ordenada, para animar el partido."""
     total = m1 + m2
     if total == 0:
         return []
     minutos = sorted(random.sample(range(3, 89), total))
     equipos = [1] * m1 + [2] * m2
     random.shuffle(equipos)
-    return [{"minuto": minuto, "equipo": equipo} for minuto, equipo in zip(minutos, equipos)]
+    eventos = []
+    for minuto, equipo in zip(minutos, equipos):
+        nombre_equipo = equipo1 if equipo == 1 else equipo2
+        eventos.append({
+            "minuto": minuto,
+            "equipo": equipo,
+            "jugador": elegir_goleador(nombre_equipo),
+        })
+    return eventos
 
 
 def calcular_multiplicador(tipos_apuesta):
@@ -91,3 +101,17 @@ def nombre_tipo_apuesta(tipo, equipo1, equipo2):
         "under": "Menos de 2.5 goles",
     }
     return etiquetas.get(tipo, tipo)
+
+
+def decimal_a_americano(cuota):
+    """Convierte una cuota decimal (ej. 2.4) a momio americano (ej. '+140')."""
+    if cuota >= 2.0:
+        valor = round((cuota - 1) * 100)
+        return f"+{valor}"
+    valor = round(-100 / (cuota - 1))
+    return str(valor)
+
+
+def momios_americanos():
+    """Diccionario {tipo: '+140'} listo para mandar al frontend."""
+    return {tipo: decimal_a_americano(datos["cuota"]) for tipo, datos in config.TIPOS_APUESTA.items()}

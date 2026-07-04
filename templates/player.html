@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Quiniela de cumpleaños</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/twemoji.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 <div id="player-app">
@@ -98,6 +99,7 @@
 
 </div>
 
+<script id="momios-datos" type="application/json">{{ momios | tojson }}</script>
 <script src="{{ url_for('static', filename='js/player.js') }}"></script>
 </body>
 </html>
